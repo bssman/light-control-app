@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Light Control</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .status {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+        .toggle-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            color: #fff;
+            background-color: #007BFF;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .toggle-button.off {
+            background-color: #DC3545;
+        }
+    </style>
+</head>
+<body>
+    <h1>Light Control</h1>
+    <p class="status">ESP8266 Status: <span id="esp-status">Checking...</span></p>
+    <p class="status">Light State: <span id="light-state">Loading...</span></p>
+    <button id="toggle-button" class="toggle-button">Toggle Light</button>
+
+    <script>
+        const apiBaseUrl = 'https://light-control-app.onrender.com'; // Replace with your Render API URL
+
+        // Elements
+        const espStatusElement = document.getElementById('esp-status');
+        const lightStateElement = document.getElementById('light-state');
+        const toggleButton = document.getElementById('toggle-button');
+
+        // Fetch ESP8266 status and light state
+        async function fetchStatus() {
+            try {
+                const response = await fetch(`${apiBaseUrl}/command`);
+                const data = await response.json();
+                lightStateElement.textContent = data.lightState === 'on' ? 'On' : 'Off';
+                toggleButton.textContent = data.lightState === 'on' ? 'Turn Off' : 'Turn On';
+                toggleButton.classList.toggle('off', data.lightState === 'on');
+            } catch (error) {
+                console.error('Error fetching light state:', error);
+                lightStateElement.textContent = 'Error';
+            }
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/status`);
+                const data = await response.json();
+                espStatusElement.textContent = data.online ? 'Online' : 'Offline';
+            } catch (error) {
+                console.error('Error fetching ESP8266 status:', error);
+                espStatusElement.textContent = 'Error';
+            }
+        }
+
+        // Toggle light state
+        async function toggleLight() {
+            const currentLightState = lightStateElement.textContent.toLowerCase();
+            const newLightState = currentLightState === 'on' ? 'off' : 'on';
+
+            try {
+                await fetch(`${apiBaseUrl}/command`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lightState: newLightState }),
+                });
+                lightStateElement.textContent = newLightState === 'on' ? 'On' : 'Off';
+                toggleButton.textContent = newLightState === 'on' ? 'Turn Off' : 'Turn On';
+                toggleButton.classList.toggle('off', newLightState === 'on');
+            } catch (error) {
+                console.error('Error toggling light state:', error);
+                alert('Failed to toggle light state.');
+            }
+        }
+
+        // Event Listener
+        toggleButton.addEventListener('click', toggleLight);
+
+        // Initial Fetch
+        fetchStatus();
+        setInterval(fetchStatus, 5000); // Poll status every 5 seconds
+    </script>
+</body>
+</html>

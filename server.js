@@ -4,7 +4,7 @@ const { Pool } = require('pg');
 const cors = require('cors');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 4000;
 
 // Middleware
 app.use(express.json());
@@ -41,6 +41,17 @@ app.post('/command', async (req, res) => {
   try {
     await pool.query('UPDATE light_state SET light_state = $1, updated_at = NOW() WHERE id = 1', [lightState]);
     res.send('Light state updated');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+});
+
+// Get ESP8266 status
+app.get('/status', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT esp8266_status FROM light_state WHERE id = 1');
+    res.json({ online: result.rows[0].esp8266_status });
   } catch (err) {
     console.error(err);
     res.status(500).send('Server error');
