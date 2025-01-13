@@ -8,15 +8,20 @@ const port = process.env.PORT || 4000;
 
 // Middleware
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: ['https://suites11.com.ng'], // Replace with your frontend domain
+  methods: ['GET', 'POST'], // Specify allowed methods
+}));
+
 
 // PostgreSQL Pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false, // Required for some hosted databases
+    rejectUnauthorized: false,
   },
 });
+
 
 // API Endpoints
 
@@ -27,7 +32,7 @@ app.get('/command', async (req, res) => {
     res.json({ lightState: result.rows[0].light_state });
   } catch (err) {
     console.error(err);
-    res.status(500).send('Server error');
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -35,7 +40,7 @@ app.get('/command', async (req, res) => {
 app.post('/command', async (req, res) => {
   const { lightState } = req.body;
   if (!lightState || (lightState !== 'on' && lightState !== 'off')) {
-    return res.status(400).send('Invalid light state');
+    return res.status(400).json({ error: 'Invalid light state' });
   }
 
   try {
@@ -43,18 +48,7 @@ app.post('/command', async (req, res) => {
     res.send('Light state updated');
   } catch (err) {
     console.error(err);
-    res.status(500).send('Server error');
-  }
-});
-
-// Get ESP8266 status
-app.get('/status', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT esp8266_status FROM light_state WHERE id = 1');
-    res.json({ online: result.rows[0].esp8266_status });
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -62,7 +56,7 @@ app.get('/status', async (req, res) => {
 app.post('/status', async (req, res) => {
   const { online } = req.body;
   if (typeof online !== 'boolean') {
-    return res.status(400).send('Invalid ESP8266 status');
+    return res.status(400).json({ error: 'Invalid ESP8266 status' });
   }
 
   try {
@@ -70,8 +64,14 @@ app.post('/status', async (req, res) => {
     res.send('ESP8266 status updated');
   } catch (err) {
     console.error(err);
-    res.status(500).send('Server error');
+    res.status(500).json({ error: 'Server error' });
   }
+});
+
+// Handle unexpected errors globally
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Unexpected server error' });
 });
 
 // Start the server
